@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  DeployId:
+    Type: String
+    Default: afsf34sfdg
+  SourceCodeBucket:
+    Type: String
+    Default: afsf34sfdg
+Resources:
+  HelloWorldLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      FunctionName: EducativeHelloWorld
+      Code:
+        S3Bucket:
+          Ref: SourceCodeBucket
+        S3Key: !Sub "${DeployId}.zip"
+      Runtime: nodejs16.x
+      Timeout: 3
+      MemorySize: 128
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties: 
+      Target: !GetAtt HelloWorldLambda.Arn
+      Description: Sample HTTP API that invokes an external API to get a joke
+      Name: EducativeHttpApi
+      CredentialsArn: !GetAtt LambdaExecutionRole.Arn
+      ProtocolType: HTTP
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: EducativeLambdaRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: logs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: lambda
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:EducativeHelloWorld"
+
